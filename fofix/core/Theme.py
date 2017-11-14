@@ -38,7 +38,6 @@ from fretwork.task import Task
 from fofix.core import Version
 from fofix.core import Config
 from fofix.core.Language import _
-from fofix.core.Shader import shaders
 from fofix.core.Image import drawImage
 from fofix.core.constants import *
 
@@ -684,8 +683,6 @@ class Theme(Task):
 
         #3D setting for making the notes always face the camera
         self.billboardNote = get("billboardNote", bool, True)
-
-        self.shaderSolocolor = get("shaderSoloColor", "color", "#0000FF")
 
         #In-game rendering
         self.hopoIndicatorX = get("hopo_indicator_x")
@@ -1787,9 +1784,6 @@ class Setlist:
             glLoadIdentity()
             glMatrixMode(GL_MODELVIEW)
             glDisable(GL_TEXTURE_2D)
-            if shaders.enable("cd"):
-                scene.itemMesh.render("Mesh_001")
-                shaders.disable()
 
     def renderLibrary(self, scene, color, label):
         if not scene.libraryMesh:
@@ -2525,4 +2519,4 @@ class Setlist:
     def renderMiniLobby(self, scene):
         return
 
-__all__ = ["LEFT", "CENTER", "RIGHT", "_", "Theme", "shaders", "Setlist"]
+__all__ = ["LEFT", "CENTER", "RIGHT", "_", "Theme", "Setlist"]

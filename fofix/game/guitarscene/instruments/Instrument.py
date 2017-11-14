@@ -31,7 +31,6 @@ from fretwork import log
 from fofix.game.song import Note, Tempo, \
     MarkerNote, FREESTYLE_MARKING_NOTE
 from fofix.core.Image import draw3Dtex
-from fofix.core.Shader import shaders
 from fofix.core.Mesh import Mesh
 from fofix.core import cmgl
 
@@ -959,11 +958,6 @@ class Instrument(object):
 
             model.render(mesh)
 
-            if shaders.enable("notes"):
-                shaders.setVar("isTextured",True)
-                model.render(mesh)
-                shaders.disable()
-
             gl.glMatrixMode(gl.GL_TEXTURE)
             gl.glLoadIdentity()
             gl.glMatrixMode(gl.GL_MODELVIEW)
@@ -977,10 +971,6 @@ class Instrument(object):
 
             #death_au: fixed 3D note colours
             gl.glColor4f(*color)
-            if shaders.enable("notes"):
-                shaders.setVar("isTextured",False)
-            model.render("Mesh_001")
-            shaders.disable()
             gl.glColor3f(self.spotColor[0], self.spotColor[1], self.spotColor[2])
             if isTappable:
                 if self.hopoColor[0] == -2:
@@ -1042,8 +1032,6 @@ class Instrument(object):
                                   scale = (1,1,1), rot = (self.camAngle ,1,0,0), multiples = False, color = color)
 
         else: #3d Notes
-            shaders.setVar("Material",color,"notes")
-
             self.notepos = self.engine.theme.notepos
             self.noterot = self.engine.theme.noterot
 
@@ -1258,9 +1246,6 @@ class Instrument(object):
 
                 gl.glPushMatrix()
                 gl.glTranslatef(x, 0, z)
-
-                if shaders.turnon:
-                    shaders.setVar("note_position",(x, (1.0 - visibility) ** (event.number + 1), z),"notes")
 
                 self.renderNote(length, sustain = sustain, color = color, tailOnly = tailOnly, isTappable = isTappable, fret = event.number, spNote = self.spNote)
                 gl.glPopMatrix()
@@ -1634,16 +1619,6 @@ class Instrument(object):
                         tex1 = self.tail1
                         tex2 = self.tail2
 
-                if big and tailOnly and shaders.enable("tail"):
-                    color = (color[0]*1.5,color[1]*1.5,color[2]*1.5,1.0)
-                    shaders.setVar("color",color)
-                    if kill and self.killfx == 0:
-                        h = shaders.getVar("height")
-                        shaders.modVar("height",0.5,0.06/h-0.1)
-                    shaders.setVar("offset",(5.0-size[1],0.0))
-                    size=(size[0]*15,size[1])
-
-
                 #Render the long part of the tail
 
                 gl.glEnable(gl.GL_TEXTURE_2D)
@@ -1673,8 +1648,6 @@ class Instrument(object):
                 gl.glDisable(gl.GL_TEXTURE_2D)
 
                 draw3Dtex(tex2, vertex = (-size[0], size[1], size[0], size[1] + .6), texcoord = (0.0, 0.0, 1.0, 1.0), color = tailcol) # render the end of a tail
-
-                shaders.disable()
 
         if tailOnly:
             return

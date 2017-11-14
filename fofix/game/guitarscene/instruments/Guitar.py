@@ -33,7 +33,6 @@ from fretwork import log
 import OpenGL.GL as gl
 
 from fofix.core.Image import draw3Dtex
-from fofix.core.Shader import shaders
 from fofix.game.guitarscene.instruments.Instrument import Instrument
 from fofix.game.guitarscene.Neck import Neck
 from fofix.game.song import Note
@@ -229,15 +228,6 @@ class Guitar(Instrument):
                     self.freestyleHitFlameCounts[fretNum] = 0  # MFH
 
     def render(self, visibility, song, pos, controls, killswitch):
-        if shaders.turnon:
-            shaders.globals["dfActive"] = self.drumFillsActive
-            shaders.globals["breActive"] = self.freestyleActive
-            shaders.globals["rockLevel"] = self.rockLevel
-            if shaders.globals["killswitch"] != killswitch:
-                shaders.globals["killswitchPos"] = pos
-            shaders.globals["killswitch"] = killswitch
-            shaders.modVar("height",0.2,0.2,1.0,"tail")
-
         if not self.starNotesSet:
             self.totalNotes = 0
 
@@ -418,10 +408,6 @@ class Guitar(Instrument):
 
             self.pickStartPos = max(pos, time)
 
-            if shaders.turnon:
-                shaders.var["fret"][self.player][note.number] = shaders.time()
-                shaders.var["fretpos"][self.player][note.number] = pos
-
             if hopo:
                 note.hopod        = True
             else:
@@ -473,9 +459,6 @@ class Guitar(Instrument):
         for theFret in range(5):
             self.freestyleHit[theFret] = controls.getState(self.keys[theFret])
             if self.freestyleHit[theFret]:
-                if shaders.turnon:
-                    shaders.var["fret"][self.player][theFret] = shaders.time()
-                    shaders.var["fretpos"][self.player][theFret] = pos
                 numHits += 1
         return numHits
 
