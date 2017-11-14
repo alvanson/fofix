@@ -20,23 +20,27 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,        #
 # MA  02110-1301, USA.                                              #
 #####################################################################
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
-from fofix.game.song import SongQueue
+from fofix.core import Player, SceneFactory
 from fofix.core.Language import _
-from fofix.core import Player
 from fofix.game import Dialogs
-from fofix.core import SceneFactory
+from fofix.game.song import SongQueue
+
 
 STARTUP_SCENE = "SongChoosingScene"
 
-class World:
-    def __init__(self, engine, players, maxplayers = None, gameMode = 0, multiMode = 0, allowGuitar = True, allowDrum = True, allowMic = False, tutorial = False):
+
+class World(object):
+    def __init__(self, engine, players, maxplayers=None, gameMode=0, multiMode=0, allowGuitar=True, allowDrum=True, allowMic=False, tutorial=False):
         self.engine       = engine
         self.players      = []
         self.minPlayers   = players
         self.maxPlayers   = maxplayers or players
-        self.gameMode     = gameMode  #Quickplay, Practice, Career
-        self.multiMode    = multiMode #Face-Off, Pro FO, Co-Op, RB Co-Op
+        self.gameMode     = gameMode   # Quickplay, Practice, Career
+        self.multiMode    = multiMode  # Co-Op, RB Co-Op
         self.allowGuitar  = allowGuitar
         self.allowDrum    = allowDrum
         self.allowMic     = allowMic
@@ -50,16 +54,10 @@ class World:
 
     def setGameName(self):
         if self.minPlayers > 1:
-            if self.gameMode == 0:
-                self.gameName = _("Face-Off")
-            elif self.gameMode == 1:
-                self.gameName = _("Pro Face-Off")
-            elif self.gameMode == 3:
+            if self.gameMode == 3:
                 self.gameName = _("FoFiX Co-Op Mode")
             elif self.gameMode == 4:
                 self.gameName = _("RB Co-Op Mode")
-            elif self.gameMode == 6:
-                self.gameName = _("Battle Mode")
         else:
             if self.gameMode == 0:
                 self.gameName = _("Quickplay")
@@ -121,7 +119,7 @@ class World:
         if self.scene:
             self.engine.view.popLayer(self.scene)
             self.engine.removeTask(self.scene)
-        self.scene = SceneFactory.create(engine = self.engine, name = name, **args)
+        self.scene = SceneFactory.create(engine=self.engine, name=name, **args)
         self.engine.addTask(self.scene)
         self.engine.view.pushLayer(self.scene)
 

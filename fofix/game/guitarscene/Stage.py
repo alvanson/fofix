@@ -24,21 +24,23 @@
 # MA  02110-1301, USA.                                              #
 #####################################################################
 
-from __future__ import with_statement
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
-import random
 import math
 import os
+import random
 
 from fretwork import log
 import OpenGL.GL as gl
 
+from fofix.core.constants import FULL_SCREEN
 from fofix.core.Image import drawImage
 from fofix.core.Language import _
 from fofix.core.LinedConfigParser import LinedConfigParser
 from fofix.core.Shader import shaders
 from fofix.core.VideoPlayer import VideoLayer, VideoPlayerError
-from fofix.core.constants import *
 from fofix.game.guitarscene import Rockmeter
 
 
@@ -62,7 +64,7 @@ class Layer(object):
         self.color       = (1.0, 1.0, 1.0, 1.0)
         self.srcBlending = gl.GL_SRC_ALPHA
         self.dstBlending = gl.GL_ONE_MINUS_SRC_ALPHA
-        self.transforms  = [[1,1], [1,1], 1, [1,1,1,1]] #scale, coord, angle, color
+        self.transforms  = [[1,1], [1,1], 1, [1,1,1,1]]  # scale, coord, angle, color
         self.effects     = []
 
     def render(self, visibility):
@@ -76,7 +78,7 @@ class Layer(object):
 
         color = self.color
 
-        #coordinates are positioned with (0,0) being in the middle of the screen
+        # coordinates are positioned with (0,0) being in the middle of the screen
         coord = [w/2 + self.position[0] * w/2, h/2 - self.position[1] * h/2]
         if v > .01:
             color = [self.color[0], self.color[1], self.color[2], visibility]
@@ -92,6 +94,7 @@ class Layer(object):
         drawImage(self.drawing, self.transforms[0], self.transforms[1],
                                                   self.transforms[2], self.transforms[3])
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
+
 
 class Effect(object):
     """
@@ -150,26 +153,28 @@ class Effect(object):
         return self.intensity * (1.0 - self.triggerProf(0, self.period, t))
 
     def step(self, threshold, x):
-        return (x > threshold) and 1 or 0
+        return 1 if (x > threshold) else 0
 
-    def linstep(self, min, max, x):
-        if x < min:
+    def linstep(self, min_, max_, x):
+        if x < min_:
             return 0
-        if x > max:
+        if x > max_:
             return 1
-        return (x - min) / (max - min)
+        return (x - min_) / (max_ - min_)
 
-    def smoothstep(self, min, max, x):
-        if x < min:
+    def smoothstep(self, min_, max_, x):
+        if x < min_:
             return 0
-        if x > max:
+        if x > max_:
             return 1
+
         def f(x):
             return -2 * x**3 + 3*x**2
-        return f((x - min) / (max - min))
 
-    def sinstep(self, min, max, x):
-        return math.cos(math.pi * (1.0 - self.linstep(min, max, x)))
+        return f((x - min_) / (max_ - min_))
+
+    def sinstep(self, min_, max_, x):
+        return math.cos(math.pi * (1.0 - self.linstep(min_, max_, x)))
 
     def getNoteColor(self, note):
         if note >= len(self.stage.engine.theme.noteColors) - 1:
@@ -180,9 +185,10 @@ class Effect(object):
         f1  = 1.0 - f2
         c1 = self.stage.engine.theme.noteColors[int(note)]
         c2 = self.stage.engine.theme.noteColors[int(note) + 1]
-        return (c1[0] * f1 + c2[0] * f2, \
-                c1[1] * f1 + c2[1] * f2, \
+        return (c1[0] * f1 + c2[0] * f2,
+                c1[1] * f1 + c2[1] * f2,
                 c1[2] * f1 + c2[2] * f2)
+
 
 class LightEffect(Effect):
     def __init__(self, layer, options):
@@ -201,6 +207,7 @@ class LightEffect(Effect):
         c = self.getNoteColor(self.stage.averageNotes[self.lightNumber])
         self.layer.transforms[3] = (c[0] * t, c[1] * t, c[2] * t, self.intensity)
 
+
 class RotateEffect(Effect):
     def __init__(self, layer, options):
         Effect.__init__(self, layer, options)
@@ -212,6 +219,7 @@ class RotateEffect(Effect):
 
         t = self.trigger()
         self.layer.transforms[2] = t*self.angle
+
 
 class WiggleEffect(Effect):
     def __init__(self, layer, options):
@@ -229,6 +237,7 @@ class WiggleEffect(Effect):
         self.layer.transforms[1][0] += self.xmag * w * s
         self.layer.transforms[1][1] += self.ymag * h * c
 
+
 class ScaleEffect(Effect):
     def __init__(self, layer, options):
         Effect.__init__(self, layer, options)
@@ -238,6 +247,7 @@ class ScaleEffect(Effect):
     def apply(self):
         t = self.trigger()
         self.layer.transforms[0] = (1.0 + self.xmag * t, -1.0 + self.ymag * t)
+
 
 class Stage(object):
     def __init__(self, guitarScene, configFileName):
@@ -249,8 +259,7 @@ class Stage(object):
         self.textures         = {}
         self.reset()
 
-
-        self.wFull = None   #MFH - needed for new stage background handling
+        self.wFull = None  # MFH - needed for new stage background handling
         self.hFull = None
 
         # evilynux - imported myfingershurt stuff from GuitarScene
@@ -259,27 +268,27 @@ class Stage(object):
         self.animatedFolder = self.engine.config.get("game", "animated_stage_folder")
 
         # evilynux - imported myfingershurt stuff from GuitarScene w/ minor modifs
-        #MFH TODO - alter logic to accommodate separated animation and slideshow
-        #           settings based on selected animated stage folder
+        # MFH TODO - alter logic to accommodate separated animation and slideshow
+        #            settings based on selected animated stage folder
         animationMode = self.engine.config.get("game", "stage_animate")
         slideShowMode = self.engine.config.get("game", "rotate_stages")
 
         if self.animatedFolder == _("None"):
-            self.rotationMode = 0   #MFH: if no animated stage folders are available, disable rotation.
+            self.rotationMode = 0  # MFH: if no animated stage folders are available, disable rotation.
         elif self.animatedFolder == "Normal":
             self.rotationMode = slideShowMode
         else:
             self.rotationMode = animationMode
 
-        self.imgArr = [] #QQstarS:random
-        self.imgArrScaleFactors = []  #MFH - for precalculated scale factors
-        self.rotateDelay = self.engine.config.get("game",  "stage_rotate_delay") #myfingershurt - user defined stage rotate delay
-        self.animateDelay = self.engine.config.get("game",  "stage_animate_delay") #myfingershurt - user defined stage rotate delay
+        self.imgArr = []  # QQstarS:random
+        self.imgArrScaleFactors = []  # MFH - for precalculated scale factors
+        self.rotateDelay = self.engine.config.get("game",  "stage_rotate_delay")  # myfingershurt - user defined stage rotate delay
+        self.animateDelay = self.engine.config.get("game",  "stage_animate_delay")  # myfingershurt - user defined stage rotate delay
         self.animation = False
 
-        self.indexCount = 0 #QQstarS:random time counter
-        self.arrNum = 0 #QQstarS:random the array num
-        self.arrDir = 1 #forwards
+        self.indexCount = 0  # QQstarS:random time counter
+        self.arrNum = 0  # QQstarS:random the array num
+        self.arrDir = 1  # forwards
 
         self.config.read(configFileName)
 
@@ -287,9 +296,9 @@ class Stage(object):
         self.themename = self.engine.data.themeLabel
         self.path = os.path.join("themes",self.themename,"backgrounds")
         self.pathfull = self.engine.getPath(self.path)
-        if not os.path.exists(self.pathfull): # evilynux
+        if not os.path.exists(self.pathfull):  # evilynux
             log.warn("Stage folder does not exist: %s" % self.pathfull)
-            self.mode = 1 # Fallback to song-specific stage
+            self.mode = 1  # Fallback to song-specific stage
 
         self.loadLayers(configFileName)
 
@@ -301,9 +310,9 @@ class Stage(object):
         for i in range(32):
             section = "layer%d" % i
             if self.config.has_section(section):
-                def get(value, type = str, default = None):
+                def get(value, type_=str, default=None):
                     if self.config.has_option(section, value):
-                        return type(self.config.get(section, value))
+                        return type_(self.config.get(section, value))
                     return default
 
                 xres    = get("xres", int, 256)
@@ -313,7 +322,7 @@ class Stage(object):
                 try:
                     drawing = self.textures[texture]
                 except KeyError:
-                    drawing = self.engine.loadImgDrawing(self, None, os.path.join(path, texture), textureSize = (xres, yres))
+                    drawing = self.engine.loadImgDrawing(self, None, os.path.join(path, texture), textureSize=(xres, yres))
                     self.textures[texture] = drawing
 
                 layer = Layer(self, drawing)
@@ -336,15 +345,15 @@ class Stage(object):
                 for j in range(32):
                     fxSection = "layer%d:fx%d" % (i, j)
                     if self.config.has_section(fxSection):
-                        type = self.config.get(fxSection, "type")
+                        type_ = self.config.get(fxSection, "type")
 
-                        if not type in fxClasses:
+                        if type_ not in fxClasses:
                             continue
 
                         options = self.config.options(fxSection)
                         options = dict([(opt, self.config.get(fxSection, opt)) for opt in options])
 
-                        fx = fxClasses[type](layer, options)
+                        fx = fxClasses[type_](layer, options)
                         layer.effects.append(fx)
 
                 if get("foreground", int):
@@ -370,13 +379,13 @@ class Stage(object):
         if not os.path.isfile(vidSource):
             log.warn("Video not found: %s" % vidSource)
             log.warn("Falling back to default stage mode.")
-            self.mode = 1 # Fallback
+            self.mode = 1  # Fallback
             return
 
-        try: # Catches invalid video files or unsupported formats
+        try:  # Catches invalid video files or unsupported formats
             log.debug("Attempting to load video: %s" % vidSource)
             self.vidPlayer = VideoLayer(self.engine, vidSource,
-                                        mute = True, loop = loop)
+                                        mute=True, loop=loop)
             self.engine.view.pushLayer(self.vidPlayer)
         except (IOError, VideoPlayerError):
             self.mode = 1
@@ -387,11 +396,9 @@ class Stage(object):
             return
         self.vidPlayer.restart()
 
-    def load(self, libraryName, songName, practiceMode = False):
+    def load(self, libraryName, songName, practiceMode=False):
         if self.scene.coOpType:
             rm = os.path.join("themes", self.themename, "rockmeter_coop.ini")
-        elif self.scene.battle:
-            rm = os.path.join("themes", self.themename, "rockmeter_profaceoff.ini")
         elif self.scene.gamePlayers > 1:
             rm = os.path.join("themes", self.themename, "rockmeter_faceoff.ini")
         else:
@@ -406,15 +413,15 @@ class Stage(object):
 
         # evilynux - Fixes a self.background not defined crash
         self.background = None
-        #MFH - new background stage logic:
-        if self.mode == 2:   #blank / no stage
+        # MFH - new background stage logic:
+        if self.mode == 2:  # blank / no stage
             self.songStage = 0
             self.rotationMode = 0
-        elif practiceMode:   #check for existing practice stage; always disable stage rotation here
+        elif practiceMode:  # check for existing practice stage; always disable stage rotation here
             self.songStage = 0
             self.rotationMode = 0
             self.mode = 1
-            #separated practice stages for the instruments by k.i.d
+            # separated practice stages for the instruments by k.i.d
             if self.scene.instruments[0].isDrum:
                 background = "practicedrum"
             elif self.scene.instruments[0].isBassGuitar:
@@ -422,34 +429,33 @@ class Stage(object):
             else:
                 background = "practice"
             if not self.engine.loadImgDrawing(self, "background", os.path.join("themes",self.themename,"backgrounds",background)):
-                #MFH - must first fall back on the old practice.png before forcing blank stage mode!
+                # MFH - must first fall back on the old practice.png before forcing blank stage mode!
                 if not self.engine.loadImgDrawing(self, "background", os.path.join("themes",self.themename,"backgrounds","practice")):
-                    log.warn("No practice stage, falling back on a forced Blank stage mode") # evilynux
-                    self.mode = 2    #if no practice stage, just fall back on a forced Blank stage mode
-
-        elif self.songStage == 1:    #check for song-specific background
+                    log.warn("No practice stage, falling back on a forced Blank stage mode")  # evilynux
+                    self.mode = 2  # if no practice stage, just fall back on a forced Blank stage mode
+        elif self.songStage == 1:  # check for song-specific background
             test = True
             if not self.engine.loadImgDrawing(self, "background", os.path.join(libraryName, songName, "background")):
-                log.notice("No song-specific stage found") # evilynux
+                log.notice("No song-specific stage found")  # evilynux
                 test = False
-            if test:  #does a song-specific background exist?
+            if test:  # does a song-specific background exist?
                 self.rotationMode = 0
                 self.mode = 1
             else:
                 self.songStage = 0
 
-        #MFH - now, after the above logic, we can run the normal stage mode logic
-        #      only worrying about checking for Blank, song-specific and
-        #      practice stage modes
-        if self.mode != 2 and self.mode != 3 and self.songStage == 0 and not practiceMode: #still need to load stage(s)
-            #myfingershurt: assign this first
-            if self.mode == 1:   #just use Default.png
+        # MFH - now, after the above logic, we can run the normal stage mode logic
+        #       only worrying about checking for Blank, song-specific and
+        #       practice stage modes
+        if self.mode != 2 and self.mode != 3 and self.songStage == 0 and not practiceMode:  # still need to load stage(s)
+            # myfingershurt: assign this first
+            if self.mode == 1:  # just use Default.png
                 if not self.engine.loadImgDrawing(self, "background", os.path.join(self.path, "default")):
-                    log.warn("No default stage; falling back on a forced Blank stage mode") # evilynux
-                    self.mode = 2    #if no practice stage, just fall back on a forced Blank stage mode
+                    log.warn("No default stage; falling back on a forced Blank stage mode")  # evilynux
+                    self.mode = 2  # if no practice stage, just fall back on a forced Blank stage mode
 
-            ##This checks how many Stage-background we have to select from
-            if self.mode == 0 and self.rotationMode == 0:  #MFH: just display a random stage
+            # This checks how many Stage-background we have to select from
+            if self.mode == 0 and self.rotationMode == 0:  # MFH: just display a random stage
                 files = []
                 fileIndex = 0
                 allfiles = os.listdir(self.pathfull)
@@ -464,29 +470,28 @@ class Stage(object):
                 # evilynux - improved error handling, fallback to blank background if no background are found
                 if fileIndex == 0:
                     log.warn("No valid stage found!")
-                    self.mode = 2;
+                    self.mode = 2
                 else:
                     i = random.randint(0,len(files)-1)
                     filename = files[i]
-            ##End check number of Stage-backgrounds
+            # End check number of Stage-backgrounds
                     if not self.engine.loadImgDrawing(self, "background", os.path.join(self.path, filename)):
-                        self.mode = 2;
+                        self.mode = 2
 
             elif self.rotationMode > 0 and self.mode != 2:
                 files = []
                 fileIndex = 0
 
-                if self.animatedFolder == "Random": #Select one of the subfolders under stages\ to animate randomly
+                if self.animatedFolder == "Random":  # Select one of the subfolders under stages\ to animate randomly
                     numAniStageFolders = len(self.engine.stageFolders)
                     if numAniStageFolders > 0:
                         self.animatedFolder = random.choice(self.engine.stageFolders)
                     else:
                         self.animatedFolder = "Normal"
-
                 elif self.animatedFolder == "None":
                     self.mode = 2
 
-                if self.animatedFolder != "Normal" and self.mode != 2: #just use the base Stages folder for rotation
+                if self.animatedFolder != "Normal" and self.mode != 2:  # just use the base Stages folder for rotation
                     self.path = os.path.join("themes",self.themename,"backgrounds",self.animatedFolder)
                     self.pathfull = self.engine.getPath(self.path)
                     self.animation = True
@@ -503,8 +508,8 @@ class Stage(object):
                             log.debug("Practice background filtered: " + name)
                     files.sort()
 
-            if self.rotationMode > 0 and self.mode != 2:   #alarian: blank stage option is not selected
-            #myfingershurt: just populate the image array in order, they are pulled in whatever order requested:
+            if self.rotationMode > 0 and self.mode != 2:  # alarian: blank stage option is not selected
+                # myfingershurt: just populate the image array in order, they are pulled in whatever order requested:
                 for j in range(len(files)):
                     self.engine.loadImgDrawing(self, "backgroundA", os.path.join(self.path, files[j]))
                     self.imgArr.append(getattr(self, "backgroundA", os.path.join(self.path, files[j])))
@@ -512,23 +517,23 @@ class Stage(object):
         if self.rotationMode > 0 and len(self.imgArr) == 0:
             self.rotationMode = 0
 
-    #stage rotation
+    # stage rotation
     def rotate(self):
         if self.animation:
             whichDelay = self.animateDelay
         else:
             whichDelay = self.rotateDelay
         self.indexCount = self.indexCount + 1
-        if self.indexCount > whichDelay:   #myfingershurt - adding user setting for stage rotate delay
+        if self.indexCount > whichDelay:  # myfingershurt - adding user setting for stage rotate delay
             self.indexCount = 0
-            if self.rotationMode == 1: #QQstarS:random
+            if self.rotationMode == 1:  # QQstarS:random
                 self.arrNum = random.randint(0,len(self.imgArr)-1)
-            elif self.rotationMode == 2: #myfingershurt: in order display mode
+            elif self.rotationMode == 2:  # myfingershurt: in order display mode
                 self.arrNum += 1
                 if self.arrNum > (len(self.imgArr)-1):
                     self.arrNum = 0
-            elif self.rotationMode == 3: #myfingershurt: in order, back and forth display mode
-                if self.arrDir == 1:  #forwards
+            elif self.rotationMode == 3:  # myfingershurt: in order, back and forth display mode
+                if self.arrDir == 1:  # forwards
                     self.arrNum += 1
                     if self.arrNum > (len(self.imgArr)-1):
                         self.arrNum -= 2
@@ -540,21 +545,20 @@ class Stage(object):
                         self.arrDir = 1
 
     def renderBackground(self):
-        #myfingershurt: multiple rotation modes
+        # myfingershurt: multiple rotation modes
         if self.mode != 2:
             if self.rotationMode == 0:
-                drawImage(self.background, scale = (1.0,-1.0),
-                                      coord = (self.wFull/2,self.hFull/2), stretched = FULL_SCREEN)
-
-            #myfingershurt:
+                drawImage(self.background, scale=(1.0,-1.0),
+                                      coord=(self.wFull/2,self.hFull/2), stretched=FULL_SCREEN)
+            # myfingershurt:
             else:
-                #MFH - use precalculated scale factors instead
-                drawImage(self.imgArr[self.arrNum], scale = (1.0,-1.0),
-                                      coord = (self.wFull/2,self.hFull/2), stretched = FULL_SCREEN)
+                # MFH - use precalculated scale factors instead
+                drawImage(self.imgArr[self.arrNum], scale=(1.0,-1.0),
+                                      coord=(self.wFull/2,self.hFull/2), stretched=FULL_SCREEN)
 
     def updateDelays(self):
-        self.rotateDelay = self.engine.config.get("game",  "stage_rotate_delay") #myfingershurt - user defined stage rotate delay
-        self.animateDelay = self.engine.config.get("game",  "stage_animate_delay") #myfingershurt - user defined stage rotate delay
+        self.rotateDelay = self.engine.config.get("game",  "stage_rotate_delay")  # myfingershurt - user defined stage rotate delay
+        self.animateDelay = self.engine.config.get("game",  "stage_animate_delay")  # myfingershurt - user defined stage rotate delay
 
     def reset(self):
         self.lastBeatPos        = None
@@ -603,7 +607,7 @@ class Stage(object):
 
     def renderLayers(self, layers, visibility):
         if self.mode != 3:
-            with self.engine.view.orthogonalProjection(normalize = True):
+            with self.engine.view.orthogonalProjection(normalize=True):
                 for layer in layers:
                     layer.render(visibility)
 
@@ -616,7 +620,7 @@ class Stage(object):
             for i in shaders.var["color"].keys():
                 shaders.modVar("color",shaders.var["color"][i],0.05,10.0)
                 height += shaders.var["color"][i][3]/3.0
-            height=height**2
+            height = height**2
             shaders.setVar("height",2*height)
             shaders.setVar("ambientGlow",height/1.5)
 
