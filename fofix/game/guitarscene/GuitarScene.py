@@ -49,7 +49,7 @@ from fofix.core.Player import CANCEL, KEY1A, KILL, STAR
 from fofix.core.Scene import Scene
 from fofix.core.Shader import shaders
 from fofix.game import Dialogs, song
-from fofix.game.guitarscene import Stage
+from fofix.game.guitarscene import Rockmeter, Stage
 from fofix.game.guitarscene.instruments import Drum, Guitar, Vocalist
 from fofix.game.Menu import Menu
 from fofix.game.Scorekeeper import ScoreCard
@@ -750,6 +750,8 @@ class GuitarScene(BandPlayBaseScene):
 
         stage = os.path.join("themes",self.themeName,"stage.ini")
         self.stage = Stage.Stage(self, self.engine.resource.fileName(stage))
+
+        self.loadRockmeter()
 
         self.loadSettings()
         self.tsBotNames = [_("KiD"), _("Stump"), _("AkedRobot"), _("Q"), _("MFH"), _("Jurgen")]
@@ -1611,6 +1613,21 @@ class GuitarScene(BandPlayBaseScene):
 
         # MFH - end of GuitarScene client initialization routine
 
+    def loadRockmeter(self):
+        if self.coOpType:
+            rm = os.path.join("themes", self.themeName, "rockmeter_coop.ini")
+        elif self.gamePlayers > 1:
+            rm = os.path.join("themes", self.themeName, "rockmeter_faceoff.ini")
+        else:
+            rm = os.path.join("themes", self.themeName, "rockmeter.ini")
+
+        if os.path.exists(os.path.join("..", "data", rm)):
+            rockmeter = self.engine.resource.fileName(rm)
+        else:
+            rockmeter = self.engine.resource.fileName(os.path.join("themes", self.themeName, "rockmeter.ini"))
+
+        self.rockmeter = Rockmeter.Rockmeter(self, rockmeter, self.coOpType)
+
     def freeResources(self):
         self.engine.view.setViewport(1,0)
         self.counter = None
@@ -1938,7 +1955,7 @@ class GuitarScene(BandPlayBaseScene):
         for player in self.players:
             player.reset()
         self.stage.reset()
-        self.stage.rockmeter.reset()
+        self.rockmeter.reset()
         self.enteredCode     = []
         self.jurgPlayer       = [False for i in self.players]  # Jurgen hasn't played the restarted song =P
 
@@ -2896,16 +2913,7 @@ class GuitarScene(BandPlayBaseScene):
                 self.scoring[num].addScore(scoreTemp)
 
     def render3D(self):
-        if self.stage.mode == 3:
-            if self.countdown <= 0:
-                if self.pause or self.failed:
-                    self.stage.vidPlayer.pause()
-                else:
-                    self.stage.vidPlayer.play()
-            else:
-                self.stage.vidPlayer.pause()
-
-        self.stage.render(self.visibility)
+        self.renderGuitar()
 
     def renderVocals(self):
         for vocalist in self.instruments:
@@ -3451,7 +3459,20 @@ class GuitarScene(BandPlayBaseScene):
                 if self.countdown > 0:
                     self.countdownOK = True
 
+            if self.stage.mode == 3:
+                if self.countdown <= 0:
+                    if self.pause or self.failed:
+                        self.stage.vidPlayer.pause()
+                    else:
+                        self.stage.vidPlayer.play()
+                else:
+                    self.stage.vidPlayer.pause()
+
+            self.stage.render(self.visibility)
+
             super(GuitarScene, self).render(visibility, topMost)
+            self.stage.renderForground(visibility)
+            self.rockmeter.render(visibility)
 
             self.visibility = 1.0 - ((1 - visibility) ** 2)
 

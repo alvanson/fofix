@@ -41,7 +41,6 @@ from fofix.core.Language import _
 from fofix.core.LinedConfigParser import LinedConfigParser
 from fofix.core.Shader import shaders
 from fofix.core.VideoPlayer import VideoLayer, VideoPlayerError
-from fofix.game.guitarscene import Rockmeter
 
 
 class Layer(object):
@@ -397,20 +396,6 @@ class Stage(object):
         self.vidPlayer.restart()
 
     def load(self, libraryName, songName, practiceMode=False):
-        if self.scene.coOpType:
-            rm = os.path.join("themes", self.themename, "rockmeter_coop.ini")
-        elif self.scene.gamePlayers > 1:
-            rm = os.path.join("themes", self.themename, "rockmeter_faceoff.ini")
-        else:
-            rm = os.path.join("themes", self.themename, "rockmeter.ini")
-
-        if os.path.exists(os.path.join("..", "data", rm)):
-            rockmeter = self.engine.resource.fileName(rm)
-        else:
-            rockmeter = self.engine.resource.fileName(os.path.join("themes", self.themename, "rockmeter.ini"))
-
-        self.rockmeter = Rockmeter.Rockmeter(self.scene, rockmeter, self.scene.coOpType)
-
         # evilynux - Fixes a self.background not defined crash
         self.background = None
         # MFH - new background stage logic:
@@ -577,11 +562,11 @@ class Stage(object):
             self.lastPickPos      = pos
             self.playedNotes      = self.playedNotes[-3:] + [sum(notes) / float(len(notes))]
             self.averageNotes[-1] = sum(self.playedNotes) / float(len(self.playedNotes))
-            self.rockmeter.triggerPick(pos, notes)
+            self.scene.rockmeter.triggerPick(pos, notes)
 
     def triggerMiss(self, pos):
         self.lastMissPos = pos
-        self.rockmeter.triggerMiss(pos)
+        self.scene.rockmeter.triggerMiss(pos)
 
     def triggerQuarterBeat(self, pos, quarterBeat):
         self.lastQuarterBeatPos = pos
@@ -611,6 +596,9 @@ class Stage(object):
                 for layer in layers:
                     layer.render(visibility)
 
+    def renderForground(self, visibility):
+        self.renderLayers(self.foregroundLayers, visibility)
+
     def render(self, visibility):
         if self.mode != 3:
             self.renderBackground()
@@ -635,4 +623,3 @@ class Stage(object):
 
         self.scene.renderGuitar()
         self.renderLayers(self.foregroundLayers, visibility)
-        self.rockmeter.render(visibility)
